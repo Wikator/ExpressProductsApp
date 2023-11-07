@@ -4,10 +4,9 @@ import { ObjectId } from "mongodb";
 
 const router = express.Router();
 
-
 router.get("/", async (req, res) => {
     const { minPrice, maxPrice } = req.query;
-    let collection = db.collection("Products");
+    const collection = db.collection("Products");
     const query = {};
 
     if (minPrice) {
@@ -31,7 +30,7 @@ router.get("/", async (req, res) => {
 });
 
 router.get("/report", async (req, res) => {
-  let collection = db.collection("Products");
+  const collection = db.collection("Products");
   const report = await collection.aggregate([
     {
         $group: {
@@ -48,20 +47,31 @@ router.get("/report", async (req, res) => {
             totalValue: 1
         }
     }
-]).toArray();
+  ]).toArray();
 
-res.json(report);
+  res.json(report);
 });
 
 router.get("/:id", async (req, res) => {
-  let collection = db.collection("Products");
-  let result = await collection.findOne({_id: new ObjectId(req.params.id)});
+  let id;
+  try {
+    id = new ObjectId(req.params.id);
+  } catch {
+    res.status(400).send("Invalid id");
+    return;
+  }
+  const collection = db.collection("Products");
+  const result = await collection.findOne({_id: id});
 
-  res.json(result);
+  if (result) {
+    res.json(result);
+  } else {
+    res.status(404).send("Product not found");
+  }
 });
 
 router.post("/", async (req, res) => {
-  let collection = db.collection("Products");
+  const collection = db.collection("Products");
   const productFromDb = await collection.findOne({name: req.body.name});
 
   if (productFromDb) {
@@ -75,13 +85,21 @@ router.post("/", async (req, res) => {
     const insertedProduct = await collection.findOne({ _id: result.insertedId });
     res.status(201).location('http://localhost:5050/products').json(insertedProduct);
   } else {
-    res.status(500).send("An error occurred while inserting the product.");
+    res.status(400).send("An error occurred while inserting the product.");
   }
 });
 
 router.put("/:id", async (req, res) => {
+  let productId;
+
+  try {
+    productId = new ObjectId(req.params.id);
+  } catch {
+    res.status(400).send("Invalid id");
+    return;
+  }
+
   const collection = db.collection("Products");
-  const productId = new ObjectId(req.params.id);
   const existingProduct = await collection.findOne({ _id: productId });
 
   if (!existingProduct) {
@@ -104,12 +122,19 @@ router.put("/:id", async (req, res) => {
 });
 
 router.delete("/:id", async (req, res) => {
-  let collection = db.collection("Products");
-  if (await collection.findOne({_id: new ObjectId(req.params.id)}) === null) {
-    res.status(404).send("Product not found");
+  let id;
+  try {
+    id = new ObjectId(req.params.id);
+  } catch {
+    res.status(400).send("Invalid id");
     return;
+  }
+
+  const collection = db.collection("Products");
+  if (!await collection.findOne({_id: id})) {
+    res.status(404).send("Product not found");
   } else {
-    await collection.deleteOne({_id: new ObjectId(req.params.id)});
+    await collection.deleteOne({_id: id});
     res.status(204).send();
   }
 });
