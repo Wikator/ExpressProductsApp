@@ -73,7 +73,7 @@ router.post("/", async (req, res) => {
 
   if (result.insertedId) {
     const insertedProduct = await collection.findOne({ _id: result.insertedId });
-    res.status(201).location('http://localhost:5050/products').json(insertedProduct);
+    res.status(201).location('https://expressproductapi.onrender.com/products/' + insertedProduct._id).json(insertedProduct);
   } else {
     res.status(500).send("An error occurred while inserting the product.");
   }
